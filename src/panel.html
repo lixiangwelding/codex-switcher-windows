@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Codex Switcher</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.5 "Segoe UI", sans-serif; background: #1e1f22; color: #e8e8e8; }
+  header { display: flex; align-items: center; justify-content: space-between;
+           padding: 12px 14px; background: #2b2d31; }
+  header h1 { font-size: 14px; margin: 0; font-weight: 600; }
+  header button { background: none; border: none; color: #aaa; cursor: pointer; font-size: 12px; }
+  #list { padding: 8px; }
+  .card { background: #2b2d31; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+          border: 1px solid transparent; }
+  .card.active { border-color: #3b82f6; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  .email { font-weight: 600; }
+  .plan { font-size: 11px; color: #fbbf24; margin-left: 6px; }
+  .badge { font-size: 11px; color: #3b82f6; }
+  .actions { margin-top: 6px; display: flex; gap: 6px; }
+  button.act { background: #3b3e45; color: #eee; border: none; border-radius: 6px;
+               padding: 4px 10px; cursor: pointer; }
+  button.act:hover { background: #4a4e57; }
+  button.danger { color: #f87171; }
+  .meter { margin-top: 6px; }
+  .meter .label { display: flex; justify-content: space-between; font-size: 11px; color: #bbb; }
+  .bar { height: 6px; background: #3b3e45; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+  .bar > div { height: 100%; background: #22c55e; }
+  .bar > div.warn { background: #f59e0b; }
+  .bar > div.hot { background: #ef4444; }
+  .err { color: #f87171; font-size: 11px; margin-top: 4px; }
+  footer { padding: 8px 14px 14px; }
+  #add { width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px;
+         padding: 8px; cursor: pointer; font-weight: 600; }
+  #empty { color: #888; text-align: center; padding: 30px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Codex Switcher</h1>
+  <button id="quit">退出</button>
+</header>
+<div id="list"></div>
+<footer><button id="add">＋ 导入当前账号（codex login 之后点这里）</button></footer>
+<script src="panel.js"></script>
+</body>
+</html>

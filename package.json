@@ -1,0 +1,39 @@
+{
+  "name": "codex-switcher-windows",
+  "version": "1.0.0",
+  "description": "Windows tray app: manage multiple Codex accounts, view usage, one-click switch. Port of znary/codex-switcher.",
+  "main": "src/main.js",
+  "author": "lixiangwelding",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "build": {
+    "appId": "dev.lixiangwelding.codex-switcher-windows",
+    "productName": "Codex Switcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Codex Switcher"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}
