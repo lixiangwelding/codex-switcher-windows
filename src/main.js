@@ -3,8 +3,10 @@
  * Windows 没有 macOS 式菜单栏，这里用系统托盘图标 + 弹出面板等价实现。
  */
 
-const { app, BrowserWindow, Tray, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, ipcMain, nativeImage, shell } = require('electron');
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 const codex = require('./codex');
 
 let tray = null;
@@ -94,3 +96,69 @@ ipcMain.handle('usage', async (_e, id) => {
 });
 
 ipcMain.handle('quit', () => app.quit());
+
+let loginWindow = null;
+let loginChild = null;
+
+/** 弹出登录窗口：实时显示 codex login 输出，登录链接可点击，成功后自动导入。 */
+function openLoginWindow() {
+  if (loginWindow && !loginWindow.isDestroyed()) {
+    loginWindow.focus();
+    return;
+  }
+  loginWindow = new BrowserWindow({
+    width: 520,
+    height: 460,
+    title: '添加 Codex 账号',
+    autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+  });
+  loginWindow.loadFile(path.join(__dirname, 'login.html'));
+  loginWindow.on('closed', () => {
+    if (loginChild) loginChild.kill();
+    loginChild = null;
+    loginWindow = null;
+  });
+}
+
+ipcMain.handle('login-start', () => {
+  if (loginChild) return false;
+  const loginHome = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-login-'));
+  loginChild = codex.startLogin(loginHome);
+  const send = (chunk) => {
+    if (loginWindow && !loginWindow.isDestroyed()) {
+      loginWindow.webContents.send('login-output', chunk.toString('utf8'));
+    }
+  };
+  loginChild.stdout.on('data', send);
+  loginChild.stderr.on('data', send);
+  loginChild.on('error', (err) => send(`\n启动失败: ${err.message}\n`));
+  loginChild.on('exit', () => {
+    loginChild = null;
+    const auth = path.join(loginHome, 'auth.json');
+    let summary = null;
+    if (fs.existsSync(auth)) {
+      try {
+        summary = codex.importAuthFile(auth);
+        refreshPanel();
+      } catch (err) {
+        send(`\n导入失败: ${err.message}\n`);
+      }
+    }
+    fs.rmSync(loginHome, { recursive: true, force: true });
+    if (loginWindow && !loginWindow.isDestroyed()) {
+      loginWindow.webContents.send('login-done', summary);
+    }
+  });
+  return true;
+});
+
+ipcMain.handle('login-cancel', () => {
+  if (loginChild) loginChild.kill();
+});
+
+ipcMain.handle('open-external', (_e, url) => {
+  if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+});
+
+ipcMain.handle('add-account', () => openLoginWindow());

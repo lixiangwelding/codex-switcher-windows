@@ -63,7 +63,8 @@ async function loadUsage(card, id) {
   }
 }
 
-document.getElementById('add').onclick = () => {
+document.getElementById('add').onclick = () => window.switcher.addAccount();
+document.getElementById('import').onclick = () => {
   window.switcher.importCurrent().catch((err) => alert(String(err.message || err)));
 };
 document.getElementById('quit').onclick = () => window.switcher.quit();

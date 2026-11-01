@@ -32,8 +32,10 @@
   .bar > div.hot { background: #ef4444; }
   .err { color: #f87171; font-size: 11px; margin-top: 4px; }
   footer { padding: 8px 14px 14px; }
-  #add { width: 100%; background: #3b82f6; color: white; border: none; border-radius: 8px;
-         padding: 8px; cursor: pointer; font-weight: 600; }
+  #add, #import { width: 100%; border: none; border-radius: 8px; padding: 8px; cursor: pointer;
+                 font-weight: 600; margin-top: 6px; }
+  #add { background: #3b82f6; color: white; }
+  #import { background: #3b3e45; color: #eee; }
   #empty { color: #888; text-align: center; padding: 30px 10px; }
 </style>
 </head>
@@ -43,7 +45,10 @@
   <button id="quit">退出</button>
 </header>
 <div id="list"></div>
-<footer><button id="add">＋ 导入当前账号（codex login 之后点这里）</button></footer>
+<footer>
+  <button id="add">＋ 添加账号（弹出登录）</button>
+  <button id="import">导入当前已登录的账号</button>
+</footer>
 <script src="panel.js"></script>
 </body>
 </html>

@@ -105,6 +105,34 @@ function importCurrent() {
   return summary;
 }
 
+/**
+ * 启动交互式 `codex login`，登录过程写到独立的 CODEX_HOME，
+ * 不会覆盖当前正在使用的账号。返回子进程，由调用方读取输出里的登录链接。
+ */
+function startLogin(loginHome) {
+  fs.mkdirSync(loginHome, { recursive: true });
+  const launch = resolveCodexLaunch();
+  return spawn(launch.command, [...launch.prefix, 'login'], {
+    env: { ...process.env, CODEX_HOME: loginHome },
+    windowsHide: true,
+    shell: /\.(cmd|bat)$/i.test(launch.command),
+  });
+}
+
+/** 把一次登录产出的 auth.json 收进账号列表（不改变当前激活账号）。 */
+function importAuthFile(file) {
+  const raw = fs.readFileSync(file, 'utf8');
+  const summary = summarizeAuth(raw);
+  fs.mkdirSync(accountsDir(), { recursive: true });
+  fs.writeFileSync(path.join(accountsDir(), `${summary.id}.json`), raw);
+  const state = loadState();
+  const existing = state.accounts.find((a) => a.id === summary.id);
+  if (existing) Object.assign(existing, summary);
+  else state.accounts.push(summary);
+  saveState(state);
+  return summary;
+}
+
 /** 切换：用快照覆盖 ~/.codex/auth.json，切换前先备份现有文件。 */
 function activate(id) {
   const snapshot = path.join(accountsDir(), `${id}.json`);
@@ -264,6 +292,8 @@ function planFromRateLimits(rateLimits) {
 module.exports = {
   loadState,
   importCurrent,
+  importAuthFile,
+  startLogin,
   activate,
   removeAccount,
   probeUsage,

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>添加 Codex 账号</title>
+<style>
+  body { margin: 0; font: 13px/1.5 "Segoe UI", sans-serif; background: #1e1f22; color: #e8e8e8;
+         display: flex; flex-direction: column; height: 100vh; }
+  header { padding: 12px 14px; background: #2b2d31; }
+  header h1 { font-size: 14px; margin: 0; }
+  header p { margin: 4px 0 0; color: #999; font-size: 12px; }
+  #log { flex: 1; overflow: auto; padding: 12px 14px; white-space: pre-wrap; word-break: break-all;
+         font-family: Consolas, monospace; font-size: 12px; }
+  #log a { color: #60a5fa; }
+  footer { padding: 10px 14px; display: flex; gap: 8px; }
+  button { border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+  #cancel { background: #3b3e45; color: #eee; }
+  #status { margin-left: auto; align-self: center; font-size: 12px; }
+  .ok { color: #4ade80; }
+  .bad { color: #f87171; }
+</style>
+</head>
+<body>
+<header>
+  <h1>添加 Codex 账号</h1>
+  <p>在弹出的浏览器里完成登录。如果没有自动打开，点下面输出里的链接。</p>
+</header>
+<div id="log">正在启动登录…</div>
+<footer>
+  <button id="cancel">取消</button>
+  <span id="status"></span>
+</footer>
+<script>
+const log = document.getElementById('log');
+log.textContent = '';
+const linkRe = /https?:\/\/[^\s)]+/g;
+const opened = new Set();
+
+function renderLink(url) {
+  const a = document.createElement('a');
+  a.href = '#';
+  a.textContent = url;
+  a.onclick = (e) => { e.preventDefault(); window.switcher.openExternal(url); };
+  return a;
+}
+
+window.switcher.onLoginOutput((text) => {
+  let last = 0;
+  for (const match of text.matchAll(linkRe)) {
+    log.appendChild(document.createTextNode(text.slice(last, match.index)));
+    log.appendChild(renderLink(match[0]));
+    if (!opened.has(match[0])) {
+      opened.add(match[0]);
+      window.switcher.openExternal(match[0]);
+    }
+    last = match.index + match[0].length;
+  }
+  log.appendChild(document.createTextNode(text.slice(last)));
+  log.scrollTop = log.scrollHeight;
+});
+
+window.switcher.onLoginDone((summary) => {
+  const status = document.getElementById('status');
+  if (summary) {
+    status.className = 'ok';
+    status.textContent = `已添加 ${summary.email || summary.id}`;
+    setTimeout(() => window.close(), 1500);
+  } else {
+    status.className = 'bad';
+    status.textContent = '未完成登录';
+  }
+});
+
+document.getElementById('cancel').onclick = () => {
+  window.switcher.loginCancel();
+  window.close();
+};
+
+window.switcher.loginStart();
+</script>
+</body>
+</html>
