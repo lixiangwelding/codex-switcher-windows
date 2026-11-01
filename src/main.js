@@ -83,7 +83,10 @@ ipcMain.handle('usage', async (_e, id) => {
   require('fs').mkdirSync(tmpHome, { recursive: true });
   require('fs').copyFileSync(snapshot, path.join(tmpHome, 'auth.json'));
   const result = await codex.probeUsage(path.join(tmpHome, 'auth.json'));
-  return { meters: codex.metersFromRateLimits(result.rateLimits), plan: result.account?.plan || '' };
+  return {
+    meters: codex.metersFromRateLimits(result.rateLimits),
+    plan: codex.planFromRateLimits(result.rateLimits),
+  };
 });
 
 ipcMain.handle('quit', () => app.quit());

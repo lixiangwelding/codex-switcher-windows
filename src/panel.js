@@ -1,10 +1,13 @@
 const listEl = document.getElementById('list');
 
 function meterBar(m) {
+  if (m.balance !== undefined) {
+    return `<div class="meter"><div class="label"><span>${m.title}</span><span>${Number(m.balance).toFixed(0)}</span></div></div>`;
+  }
   const used = Math.max(0, Math.min(100, m.usedPercent));
   const cls = used >= 90 ? 'hot' : used >= 70 ? 'warn' : '';
-  const reset = m.resetsAt ? ` · ${new Date(m.resetsAt).toLocaleString()}` : '';
-  return `<div class="meter"><div class="label"><span>${m.title}</span><span>${used.toFixed(0)}%${reset}</span></div>`
+  const reset = m.resetsAt ? ` · ${new Date(m.resetsAt).toLocaleString()} 重置` : '';
+  return `<div class="meter"><div class="label"><span>${m.title}</span><span>已用 ${used.toFixed(0)}%${reset}</span></div>`
     + `<div class="bar"><div class="${cls}" style="width:${used}%"></div></div></div>`;
 }
 

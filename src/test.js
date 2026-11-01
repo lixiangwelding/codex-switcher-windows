@@ -50,12 +50,19 @@ assert.strictEqual(state.accounts.length, 1);
 assert.ok(!fs.existsSync(path.join(codex.accountsDir(), 'id-bob.json')));
 
 const meters = codex.metersFromRateLimits({
-  rate_limits: { five_hour: { name: '5小时', used_percent: 80, resets_at: '2026-11-04T06:47:00Z' },
-                 weekly: { name: '每周', used_percent: 10 } },
+  rateLimits: {
+    primary: { usedPercent: 100, windowDurationMins: 10080, resetsAt: 1793774863 },
+    secondary: null,
+    credits: { hasCredits: true, unlimited: false, balance: '7205.9' },
+    planType: 'pro',
+  },
 });
 assert.strictEqual(meters.length, 2);
-assert.strictEqual(meters[0].title, '5小时');
-assert.strictEqual(meters[0].usedPercent, 80);
+assert.strictEqual(meters[0].title, '每周');
+assert.strictEqual(meters[0].usedPercent, 100);
+assert.ok(meters[0].resetsAt.startsWith('2026-'));
+assert.strictEqual(meters[1].title, '余额');
+assert.strictEqual(codex.planFromRateLimits({ rateLimits: { planType: 'pro' } }), 'pro');
 
 assert.throws(() => codex.activate('no-such'), /快照不存在/);
 

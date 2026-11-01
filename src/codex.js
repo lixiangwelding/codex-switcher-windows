@@ -129,20 +129,30 @@ function removeAccount(id) {
   saveState(state);
 }
 
-/** 解析 codex 可执行文件：环境变量优先，其次常见安装位置。 */
-function resolveCodexBinary() {
-  if (process.env.CODEX_BINARY_PATH && fs.existsSync(process.env.CODEX_BINARY_PATH)) {
-    return process.env.CODEX_BINARY_PATH;
+/**
+ * 解析 codex 的启动方式，返回 { command, prefix }。
+ *
+ * Windows 上 `codex` 是 .cmd 批处理，Node 直接 spawn .cmd 会抛 spawn EINVAL；
+ * 而且本机的 C:\Windows\System32\codex.cmd 还会强制追加沙箱绕过参数。
+ * 所以解析到 node.exe + @openai/codex 的 codex.js，直接用 node 启动，参数原样传递。
+ */
+function resolveCodexLaunch() {
+  if (process.env.CODEX_BINARY_PATH) {
+    return { command: process.env.CODEX_BINARY_PATH, prefix: [] };
   }
-  const candidates = [
-    path.join(process.env.APPDATA || '', 'npm', 'codex.cmd'),
-    'C:\\Program Files\\nodejs\\codex.cmd',
-    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'nodejs', 'codex.cmd'),
+  const dirs = [
+    'C:\\Program Files\\nodejs',
+    path.join(process.env.APPDATA || '', 'npm'),
+    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'nodejs'),
+    path.dirname(process.execPath),
   ];
-  for (const c of candidates) {
-    if (c && fs.existsSync(c)) return c;
+  for (const dir of dirs) {
+    const js = path.join(dir, 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
+    if (!fs.existsSync(js)) continue;
+    const node = fs.existsSync(path.join(dir, 'node.exe')) ? path.join(dir, 'node.exe') : 'node';
+    return { command: node, prefix: [js] };
   }
-  return 'codex';
+  return { command: 'codex', prefix: [] };
 }
 
 /**
@@ -152,10 +162,17 @@ function resolveCodexBinary() {
  */
 function probeUsage(snapshotPath, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
-    const child = spawn(resolveCodexBinary(), ['-s', 'read-only', '-a', 'never', 'app-server'], {
-      env: { ...process.env, CODEX_HOME: path.dirname(snapshotPath) },
-      windowsHide: true,
-    });
+    const launch = resolveCodexLaunch();
+    const child = spawn(
+      launch.command,
+      [...launch.prefix, '-s', 'read-only', '-a', 'never', 'app-server'],
+      {
+        env: { ...process.env, CODEX_HOME: path.dirname(snapshotPath) },
+        windowsHide: true,
+        // 兜底：解析不到 node 入口而退回 .cmd 时，必须经 shell 启动。
+        shell: /\.(cmd|bat)$/i.test(launch.command),
+      },
+    );
     let buf = '';
     let account = null;
     let rateLimits = null;
@@ -212,24 +229,36 @@ function probeUsage(snapshotPath, timeoutMs = 20000) {
   });
 }
 
-/** 把 rateLimits 结果规整成展示用的窗口列表。 */
+/**
+ * 把 account/rateLimits/read 的结果规整成展示用的窗口列表。
+ * 真实结构（codex app-server）：rateLimits.primary / secondary，
+ * 每项含 usedPercent、windowDurationMins、resetsAt（unix 秒）。
+ */
 function metersFromRateLimits(rateLimits) {
+  const root = (rateLimits && rateLimits.rateLimits) || rateLimits || {};
   const meters = [];
-  const walk = (node) => {
-    if (!node || typeof node !== 'object') return;
-    if (typeof node.used_percent === 'number') {
-      meters.push({
-        title: node.name || node.window || node.id || `窗口${meters.length + 1}`,
-        usedPercent: node.used_percent,
-        resetsAt: node.resets_at || node.reset_at || null,
-      });
-    }
-    for (const v of Object.values(node)) {
-      if (v && typeof v === 'object') walk(v);
-    }
-  };
-  walk(rateLimits);
+  for (const [key, label] of [['primary', '主窗口'], ['secondary', '副窗口']]) {
+    const w = root[key];
+    if (!w || typeof w.usedPercent !== 'number') continue;
+    const mins = w.windowDurationMins;
+    const title = mins === 300 ? '5 小时' : mins === 1440 ? '每日' : mins === 10080 ? '每周' : label;
+    meters.push({
+      title,
+      usedPercent: w.usedPercent,
+      resetsAt: w.resetsAt ? new Date(w.resetsAt * 1000).toISOString() : null,
+    });
+  }
+  const credits = root.credits;
+  if (credits && credits.hasCredits && !credits.unlimited) {
+    meters.push({ title: '余额', balance: credits.balance });
+  }
   return meters;
+}
+
+/** 从用量结果里取套餐类型（rateLimits.planType）。 */
+function planFromRateLimits(rateLimits) {
+  const root = (rateLimits && rateLimits.rateLimits) || {};
+  return root.planType || '';
 }
 
 module.exports = {
@@ -239,7 +268,8 @@ module.exports = {
   removeAccount,
   probeUsage,
   metersFromRateLimits,
+  planFromRateLimits,
   summarizeAuth,
-  resolveCodexBinary,
+  resolveCodexLaunch,
   accountsDir,
 };
