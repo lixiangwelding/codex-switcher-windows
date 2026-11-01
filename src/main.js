@@ -11,9 +11,13 @@ let tray = null;
 let panel = null;
 
 function iconImage() {
-  const file = path.join(__dirname, '..', 'build', 'tray.png');
-  const img = nativeImage.createFromPath(file);
-  return img.isEmpty() ? nativeImage.createEmpty() : img;
+  const ico = path.join(__dirname, '..', 'build', 'icon.ico');
+  const png = path.join(__dirname, '..', 'build', 'tray.png');
+  for (const file of [ico, png]) {
+    const img = nativeImage.createFromPath(file);
+    if (!img.isEmpty()) return img;
+  }
+  return nativeImage.createEmpty();
 }
 
 function createPanel() {
